@@ -11,7 +11,7 @@ public class PoliceTracker : Script
     private Keys _initKey = Keys.F6;
 
     bool _initialized = false;
-    bool _useAbbreviations = false;
+    bool _useAbbreviations = true;
     string _lastCrime = "";
     Player _player = Game.Player;
     private string _pendingCrime = "";
@@ -105,6 +105,14 @@ public class PoliceTracker : Script
             _playerKillCount = 0;
         }
 
+        if (wantedLevel > _lastWantedLevel && _pendingCrime != "")
+        {
+            SetCrime(_pendingCrime);
+            _pendingCrime = "";
+        }
+
+        _lastWantedLevel = wantedLevel;
+
         foreach (Ped ped in World.GetNearbyPeds(Game.Player.Character, 100f))
         {
             if (ped.IsDead && _deadPeds.Add(ped.Handle))
@@ -116,21 +124,6 @@ public class PoliceTracker : Script
                 OnPedCrime(ped);
             }
         }
-
-        if (wantedLevel <= 0)
-        {
-            SetCrime("");
-            _pendingCrime = "";
-            _playerKillCount = 0;
-        }
-
-        if (wantedLevel > _lastWantedLevel && _pendingCrime != "")
-        {
-            SetCrime(_pendingCrime);
-            _pendingCrime = "";
-        }
-
-        _lastWantedLevel = wantedLevel;
     }
 
     private void OnPedDeath(Ped ped)
@@ -153,11 +146,7 @@ public class PoliceTracker : Script
 
         string crime;
 
-        if (_player.Character.IsInVehicle() && !ped.HasBeenDamagedByAnyWeapon())
-        {
-            crime = "Vehicular Manslaughter";
-        }
-        else if (_playerKillCount >= 2)
+        if (_playerKillCount >= 2)
         {
             crime = "Homicide";
         }
@@ -177,7 +166,9 @@ public class PoliceTracker : Script
     private void OnPedCrime(Ped ped)
     {
         if (ped.IsDead)
+        {
             return;
+        }
 
         if (ped.IsOnFire)
         {
@@ -218,7 +209,7 @@ public class PoliceTracker : Script
     {
         if (e.OldCrime == "")
         {
-            Notify($"You're now wanted by ~b~{GetAgency()}~s~ for ~r~{e.NewCrime}~s~");
+            Notify($"You're now wanted by the ~b~{GetAgency()}~s~ for ~r~{e.NewCrime}~s~");
         }
         else
         {
