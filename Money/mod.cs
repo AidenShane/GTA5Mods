@@ -1,41 +1,35 @@
-// Keys: https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.keys?view=netframework-4.8
-
 using GTA;
 using GTA.UI;
 using System.Windows.Forms;
 
-namespace gta_money_mod
+namespace GtaMoneyMod;
+
+public class MoneyMod : Script
 {
-    public class Mod : Script
+    private const Keys _key = Keys.F7;
+    private const int _amount = int.MaxValue;
+    public MoneyMod()
     {
-        readonly int _key = 118; // Keys.F7
-        public Mod()
-        {
-            KeyDown += OnKeyDown;
-        }
+        KeyDown += OnKeyDown;
+        SendInitNotif();
+    }
 
-        private void OnKeyDown(object sender, KeyEventArgs e)
+    private void OnKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.KeyCode == _key)
         {
-            if (e.KeyCode.GetHashCode() == GetKeyHash(_key))
-            {
-                Game.Player.Money = 2147483647; // 2.14 billion
-                Notify("Set money to 2.14 billion!");
-            }
+            Game.Player.Money = _amount;
+            Notify($"Set money to {_amount:N0}");
         }
+    }
 
-        private static int GetKeyHash(Keys key)
-        {
-            return key.GetHashCode();
-        }
+    private void SendInitNotif()
+    {
+        Notify($"Loaded money mod, use {_key} to get ${_amount:N0}");
+    }
 
-        private static int GetKeyHash(int key)
-        {
-            return key;
-        }
-
-        private static void Notify(string text)
-        {
-            Notification.PostTicker(text, false, false);
-        }
+    private static void Notify(string text)
+    {
+        Notification.PostTicker(text, false, false);
     }
 }
