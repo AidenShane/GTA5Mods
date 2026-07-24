@@ -8,6 +8,7 @@ public class MoneyMod : Script
 {
     private const Keys _key = Keys.F7;
     private const int _amount = int.MaxValue;
+
     public MoneyMod()
     {
         KeyDown += OnKeyDown;
