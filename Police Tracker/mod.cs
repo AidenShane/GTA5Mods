@@ -8,7 +8,7 @@ namespace GTAPoliceTrackerMod;
 
 public class PoliceTracker : Script
 {
-    private Keys _initKey = Keys.F6;
+    private const Keys _initKey = Keys.F6;
 
     bool _initialized = false;
     bool _useAbbreviations = true;
@@ -19,7 +19,10 @@ public class PoliceTracker : Script
     private int _lastWantedLevel = 0;
     private int _playerKillCount = 0;
 
-    private readonly HashSet<int> _deadPeds = new();
+    private string _lastAgency = "";
+    private string _agency = "";
+
+    private readonly HashSet<int> _deadPeds = [];
 
     public event EventHandler<CrimeChangedEventArgs> CrimeChanged;
 
@@ -67,15 +70,6 @@ public class PoliceTracker : Script
         {
             InitKeyPressed();
         }
-        else
-        {
-            ActionKeyPressed(e.KeyCode);
-        }
-    }
-
-    private void ActionKeyPressed(Keys key)
-    {
-
     }
 
     private void InitKeyPressed()
@@ -92,6 +86,11 @@ public class PoliceTracker : Script
 
     private void OnTick(object sender, EventArgs e)
     {
+        if (!_initialized) return;
+
+        string agency = _agency;
+        string currAgency = GetAgency();
+
         int wantedLevel = _player.Wanted.WantedLevel;
 
         if (wantedLevel > 0)
@@ -112,6 +111,12 @@ public class PoliceTracker : Script
         }
 
         _lastWantedLevel = wantedLevel;
+        
+        if (_agency != currAgency)
+        {
+            _lastAgency = _agency;
+            _agency = currAgency;
+        }
 
         foreach (Ped ped in World.GetNearbyPeds(Game.Player.Character, 100f))
         {
@@ -207,7 +212,7 @@ public class PoliceTracker : Script
 
     private void OnCrimeChanged(object sender, CrimeChangedEventArgs e)
     {
-        if (e.OldCrime == "")
+        if (e.OldCrime == "" || _lastAgency != GetAgency())
         {
             Notify($"You're now wanted by the ~b~{GetAgency()}~s~ for ~r~{e.NewCrime}~s~");
         }
@@ -220,10 +225,11 @@ public class PoliceTracker : Script
     private string GetAgency()
     {
         string region = GetRegion();
+        string agency;
 
         if (_useAbbreviations)
         {
-            return region switch
+            agency = region switch
             {
                 "Los Santos" => "LSPD",
                 "Blaine County" => "BCSO",
@@ -232,13 +238,47 @@ public class PoliceTracker : Script
         }
         else
         {
-            return region switch
+            agency = region switch
             {
                 "Los Santos" => "Los Santos Police Department",
-                "Blaine County" => "Blaine County Sheriff's Office",
+                "Blaine County" => "Blaine County Sheriffs Office",
                 _ => "San Andreas Highway Patrol"
             };
         }
+
+        if (IsWantedByMilitary())
+        {
+            agency = "Merryweather";
+        }
+
+        if (IsWantedByNoose())
+        {
+            if (_useAbbreviations)
+            {
+                agency = "NOOSE";
+            }
+            else
+            {
+                agency = "National Office Of Security Enforcement";
+            }
+        }
+
+        return agency;
+    }
+
+    private bool IsWantedByNoose()
+    {
+        return _player.Wanted.WantedLevel > 4 && IsWantedByMilitary() == false;
+    }
+
+    private bool IsWantedByMilitary()
+    {
+        return Function.Call<string>(
+            Hash.GET_NAME_OF_ZONE,
+            _player.Character.Position.X,
+            _player.Character.Position.Y,
+            _player.Character.Position.Z
+        ) == "ARMYB";
     }
 
     private void Notify(string text, bool important = false)
@@ -283,14 +323,8 @@ public class PoliceTracker : Script
     }
 }
 
-public class CrimeChangedEventArgs
+public class CrimeChangedEventArgs(string _new, string _last)
 {
-    public string NewCrime { get; private set; }
-    public string OldCrime { get; private set; }
-
-    public CrimeChangedEventArgs(string _new, string _last)
-    {
-        NewCrime = _new;
-        OldCrime = _last;
-    }
+    public string NewCrime { get; private set; } = _new;
+    public string OldCrime { get; private set; } = _last;
 }
